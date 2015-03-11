@@ -289,7 +289,7 @@ function list( arg )
 
                 term.write( ( " " ):rep( self.x2-self.x1-self.margin*2-1 ) )
 
-                local txt = self.setLen( self.txt[ i ].txt, self.x2-self.x1-self.margin*2-1 )
+                local txt = self.setLen( self.txt[ i ].txt, self.x2-self.x1-self.margin*2+1 )
 
                 self.advPrint( txt, self.y1+self.margin+i-1, self.x1+self.margin, self.x2-self.margin )
             end
