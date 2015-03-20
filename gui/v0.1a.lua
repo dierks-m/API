@@ -71,8 +71,124 @@ function advPrint( text, y1, x1, x2, obj )
     end
 end
 
+local function format( text, xSize )
+    local xPos, formatted = 1, { "" }
+
+    for k in text:gmatch( "%s*%S+" ) do
+        if #k:gsub( "[$&][%xzlr]", "" ) > xSize-xPos then
+            local _, matches = k:gsub( "[$&][%xzlr]", "" )
+            if #k-matches*2 > xSize then
+                local rest = xSize-#formatted[ #formatted ]:gsub( "[$&][%xzlr]", "" )
+                local currPos, actPos = 1, 1
+
+                while currPos < #k do
+                    if not k:sub( currPos ):match( "^[$&][%xzlr]" ) then
+                        if actPos == rest-1 then
+                            break
+                        end
+                        currPos = currPos + 1
+                        actPos = actPos + 1
+                    else
+                        currPos = currPos + 2
+                    end
+                end
+
+                formatted[ #formatted ] = formatted[ #formatted ] .. k:sub( 1, currPos ) .. "-"
+                formatted[ #formatted+1 ] = k:sub( currPos+1 )
+                xPos = #k:sub( currPos+1 )
+            else
+                k = k:match( "%S+" )
+                formatted[ #formatted+1 ] = k
+                xPos = #k
+            end
+        else
+            formatted[ #formatted ] = formatted[ #formatted ] .. k
+            xPos = xPos + #k:gsub( "[$&][%xzlr]", "" )
+        end
+    end
+
+    return formatted
+end
+
+function textArea( arg )
+    assert( arg.x1 and arg.x2 and arg.y1 and arg.y2, "Missing boundaries" )
+    assert( arg.txt, "No text given" )
+
+    arg.margin = tonumber( arg.margin ) or 1
+    local txt = {}
+
+    if type( arg.txt ) == "table" then
+        for k, v in pairs( arg.txt ) do
+            local res = format( v, math.max( arg.x1, arg.x2 )-math.min( arg.x1, arg.x2 )+1-arg.margin*2 )
+
+            for k1, v1 in pairs( res ) do
+                txt[ #txt+1 ] = v1
+            end
+        end
+    else
+        arg.txt = tostring( arg.txt )
+        local res = format( arg.txt, math.max( arg.x1, arg.x2 )-math.min( arg.x1, arg.x2 )+1-arg.margin*2 )
+
+        for k, v in pairs( res ) do
+            txt[ #txt+1 ] = v
+        end
+    end
+
+    local new = {
+        draw = function( self )
+            self.obj.setBackgroundColor( self.bg )
+
+            for y = self.y1, self.y2 do
+                self.obj.setCursorPos( self.x1, y )
+                self.obj.write( ( " " ):rep( self.x2-self.x1+1 ) )
+
+                if self.txt[ y-self.y1+1-self.margin ] then
+                    self.advPrint( self.txt[ y-self.y1+1-self.margin ], y, self.x1+self.margin, self.x2-self.margin, self.obj )
+                end
+            end
+        end;
+
+        setText = function( self, txt )
+            local new = {}
+            if type( txt ) == "table" then
+                for k, v in pairs( txt ) do
+                    local res = format( v, self.x2-self.x1-arg.margin*2+1 )
+
+                    for k1, v1 in pairs( res ) do
+                        new[ #new+1 ] = v1
+                    end
+                end
+            else
+                txt = tostring( txt )
+                local res = format( txt, self.x2-self.x1-arg.margin*2+1 )
+
+                for k, v in pairs( res ) do
+                    new[ #new+1 ] = v
+                end
+            end
+
+            self.txt = new
+            self:draw()
+        end;
+
+        x1 = math.min( arg.x1, arg.x2 );
+        x2 = math.max( arg.x1, arg.x2 );
+        y1 = math.min( arg.y1, arg.y2 );
+        y2 = math.max( arg.y1, arg.y2 );
+
+        txt = txt;
+        advPrint = advPrint;
+        format = format;
+        obj = arg.wrap or term;
+        bg = validColor( arg.bg, 256 );
+        margin = arg.margin;
+    }
+
+    return new
+end
+
 function area( arg )
-    assert( arg.x1 and arg.x2 and arg.y1 and arg.y2 )
+    assert( arg.x1 and arg.x2 and arg.y1 and arg.y2, "Missing boundaries" )
 
     local new = {
         draw = function( self )
@@ -101,7 +217,7 @@ end
 
 function read( arg )
 
-    assert( arg.x1 and arg.x2 and arg.y1, "Too few arguments" )
+    assert( arg.x1 and arg.x2 and arg.y1, "Missing boundaries" )
 
     local new = {
         draw = function( self )
@@ -218,7 +334,7 @@ function read( arg )
 end
 
 function list( arg )
-    assert( arg.x1 and arg.x2 and arg.y1 and arg.y2, "Too few arguments" )
+    assert( arg.x1 and arg.x2 and arg.y1 and arg.y2, "Missing boundaries" )
 
     for k, v in pairs( arg.txt ) do
         if type( v ) == "string" then
