@@ -27,24 +27,25 @@ function setLen( str, len )
     end
 end
 
-local function tryWrite( text, pattern )
+local function tryWrite( text, pattern, obj )
     local match = text:match( pattern )
 
     if match then
         if match:match( "[&$]%x" ) then
-            term[ match:sub( 1, 1 ) == "&" and "setTextColor" or "setBackgroundColor" ]( math.pow( 2, 15-tonumber( match:sub( 2 ), 16 ) ) )
+            obj[ match:sub( 1, 1 ) == "&" and "setTextColor" or "setBackgroundColor" ]( math.pow( 2, 15-tonumber( match:sub( 2 ), 16 ) ) )
         else
-            term.write( match )
+            obj.write( match )
         end
 
         return text:sub( #match+1 )
     end
 end
 
-function advPrint( text, y1, x1, x2 )
+function advPrint( text, y1, x1, x2, obj )
+    obj = obj or term
     y1 = y1 or 1
     x1 = x1 or 1
-    x2 = x2 or term.getSize()
+    x2 = x2 or obj.getSize()
     local x3 = x1
 
     local ort = text:match( "^[&$]([zlr])" )
@@ -61,12 +62,12 @@ function advPrint( text, y1, x1, x2 )
         text = text:sub( 3 )
     end
 
-    term.setCursorPos( x3, y1 )
+    obj.setCursorPos( x3, y1 )
 
     while #text > 0 do
-        text = tryWrite( text, "^[&$]%x" ) or
-            tryWrite( text, "^%w+" ) or
-            tryWrite( text, "^." )
+        text = tryWrite( text, "^[&$]%x", obj ) or
+            tryWrite( text, "^%w+", obj ) or
+            tryWrite( text, "^.", obj )
     end
 end
 
@@ -75,10 +76,10 @@ function area( arg )
 
     local new = {
         draw = function( self )
-            term.setBackgroundColor( self.bg )
+            self.obj.setBackgroundColor( self.bg )
             for i = self.y1, self.y2 do
-                term.setCursorPos( self.x1, i )
-                term.write( ( self.char ):rep( self.x2-self.x1+1 ) )
+                self.obj.setCursorPos( self.x1, i )
+                self.obj.write( ( self.char ):rep( self.x2-self.x1+1 ) )
             end
         end;
 
@@ -87,6 +88,7 @@ function area( arg )
 
         bg = validColor( arg.bg, 256 );
         char = arg.char and #arg.char == 1 and arg.char or " ";
+        obj = arg.obj or term;
 
         x1 = math.min( arg.x1, arg.x2 );
         x2 = math.max( arg.x1, arg.x2 );
@@ -104,13 +106,13 @@ function read( arg )
     local new = {
         draw = function( self )
             local txt = self.txt:sub( self.xScroll+1, self.xScroll+self.x2-self.x1+1 )
-            term.setCursorPos( self.x1, self.y1 )
-            term.setBackgroundColor( self.bg )
-            term.setTextColor( self.fg )
+            self.obj.setCursorPos( self.x1, self.y1 )
+            self.obj.setBackgroundColor( self.bg )
+            self.obj.setTextColor( self.fg )
 
-            term.write( txt )
-            term.write( ( " " ):rep( self.x2-self.x1-#txt+1 ) )
-            term.setCursorPos( self.x1+self.xPos-1, self.y1 )
+            self.obj.write( txt )
+            self.obj.write( ( " " ):rep( self.x2-self.x1-#txt+1 ) )
+            self.obj.setCursorPos( self.x1+self.xPos-1, self.y1 )
         end;
 
         setCursor = function( self, x1, forceUpdate )
@@ -131,7 +133,7 @@ function read( arg )
                 if update or forceUpdate then
                     self:draw()
                 else
-                    term.setCursorPos( self.x1+self.xPos-1, self.y1 )
+                    self.obj.setCursorPos( self.x1+self.xPos-1, self.y1 )
                 end
             end
         end;
@@ -168,8 +170,11 @@ function read( arg )
                     self.txt = self.txt:sub( self.xScroll+self.xPos ) .. self.txt:sub( self.xScroll+self.xPos+2 )
                     self:draw()
                 end
-            elseif e[1] == "mouse_click" then
+            elseif e[1] == "mouse_click" or self.obj.setTextScale and e[1] == "monitor_touch" then
                 self.lastX = nil
+                if e[1] == "monitor_touch" then
+                    e[2] = 1
+                end
 
                 if e[3] >= self.x1 and e[3] <= self.x2 and e[4] == self.y1 then
                     self.lastX = e[3]
@@ -188,16 +193,17 @@ function read( arg )
         end;
 
         focus = function( self, cursorBlink )
-            term.setCursorPos( self.x1+self.xPos-1, self.y1 )
+            self.obj.setCursorPos( self.x1+self.xPos-1, self.y1 )
 
-            if cursorBlink == true then
-                term.setCursorBlink( true )
+            if cursorBlink == true and self.obj.setCursorBlink then
+                self.obj.setCursorBlink( true )
             end
         end;
 
         x1 = arg.x1;
         x2 = arg.x2;
         y1 = arg.y1;
+        obj = arg.wrap or term;
         filter = type( arg.filter ) == "function" and arg.filter;
         txt = arg.txt or "";
         xScroll = arg.txt and math.max( 0, #arg.txt-arg.x2+arg.x1-1 ) or 0;
@@ -260,47 +266,48 @@ function list( arg )
                 end
 
                 for i = 1, maxlen do
-                    term.setCursorPos( self.x2-self.margin, self.y1+self.margin+i-1 )
+                    self.obj.setCursorPos( self.x2-self.margin, self.y1+self.margin+i-1 )
 
                     if i >= pos and i < pos+len then
-                        term.setBackgroundColor( self.scrollfg )
+                        self.obj.setBackgroundColor( self.scrollfg )
                     else
-                        term.setBackgroundColor( self.scrollbg )
+                        self.obj.setBackgroundColor( self.scrollbg )
                     end
 
-                    term.write( " " )
+                    self.obj.write( " " )
                 end
             else
-                term.setCursorPos( self.x2-self.margin, self.y1+self.margin )
-                term.setTextColor( self.spos > 1 and self.scrollfg or self.scrollbg )
-                term.write( "^" )
-                term.setCursorPos( self.x2-self.margin, self.y2-self.margin )
-                term.setTextColor( self.spos < #self.txt-self.y2+self.y1+self.margin*2 and self.scrollfg or self.scrollbg )
-                term.write( "v" )
+                self.obj.setCursorPos( self.x2-self.margin, self.y1+self.margin )
+                self.obj.setTextColor( self.spos > 1 and self.scrollfg or self.scrollbg )
+                self.obj.setBackgroundColor( self.bg )
+                self.obj.write( "^" )
+                self.obj.setCursorPos( self.x2-self.margin, self.y2-self.margin )
+                self.obj.setTextColor( self.spos < #self.txt-self.y2+self.y1+self.margin*2 and self.scrollfg or self.scrollbg )
+                self.obj.write( "v" )
             end
         end;
 
         drawOptions = function( self )
             for i = 1, math.min( self.y2-self.y1-self.margin*2+1, #self.txt ) do
-                term.setCursorPos( self.x1+self.margin, self.y1+self.margin+i-1 )
-                term.setBackgroundColor( self.sel == i+self.spos-1 and self.txt[ i+self.spos-1 ].selbg or self.txt[ i+self.spos-1 ].bg )
-                term.setTextColor( self.sel == i+self.spos-1 and self.txt[ i+self.spos-1 ].selfg or self.txt[ i+self.spos-1 ].fg )
-                term.setCursorPos( self.x1+self.margin, self.y1+self.margin+i-1 )
+                self.obj.setCursorPos( self.x1+self.margin, self.y1+self.margin+i-1 )
+                self.obj.setBackgroundColor( self.sel == i+self.spos-1 and self.txt[ i+self.spos-1 ].selbg or self.txt[ i+self.spos-1 ].bg )
+                self.obj.setTextColor( self.sel == i+self.spos-1 and self.txt[ i+self.spos-1 ].selfg or self.txt[ i+self.spos-1 ].fg )
+                self.obj.setCursorPos( self.x1+self.margin, self.y1+self.margin+i-1 )
 
-                term.write( ( " " ):rep( self.x2-self.x1-self.margin*2-1 ) )
+                self.obj.write( ( " " ):rep( self.x2-self.x1-self.margin*2-1 ) )
 
                 local txt = self.setLen( self.txt[ i+self.spos-1 ].txt, self.x2-self.x1-self.margin*2-1 )
 
-                self.advPrint( txt, self.y1+self.margin+i-1, self.x1+self.margin, self.x2-self.margin )
+                self.advPrint( txt, self.y1+self.margin+i-1, self.x1+self.margin, self.x2-self.margin, self.obj )
             end
         end;
 
         draw = function( self )
-            term.setBackgroundColor( self.bg )
+            self.obj.setBackgroundColor( self.bg )
 
             for i = self.y1, self.y2 do
-                term.setCursorPos( self.x1, i )
-                term.write( ( " " ):rep( self.x2-self.x1+1 ) )
+                self.obj.setCursorPos( self.x1, i )
+                self.obj.write( ( " " ):rep( self.x2-self.x1+1 ) )
             end
 
             self:drawBar()
@@ -310,16 +317,30 @@ function list( arg )
         evHandle = function( self, ... )
             local e = { ... }
 
-            if e[1] == "mouse_click" then
+            if e[1] == "mouse_click" or self.obj.setTextScale and e[1] == "monitor_touch" then
                 self.lastY = nil
 
-                if e[3] >= self.x1+self.margin and e[3] < self.x2-self.margin-1 and e[4] >= self.y1+self.margin and e[4] <= self.y2-self.margin then
-                    local clicked = e[4]+self.spos-self.y1-self.margin
+                if e[1] == "monitor_touch" then
+                    e[2] = 1
+                end
+
+                if e[3] >= self.x1+self.margin and e[3] < self.x2-self.margin+1 and e[4] >= self.y1+self.margin and e[4] <= self.y2-self.margin then
+                    local yPos, xPos = e[4]+self.spos-self.y1-self.margin, e[3]-self.x1-self.margin+1
                     self.lastY = e[4]
 
-                    if self.txt[ clicked ] and e[2] == 1 then
-                        self.sel = clicked
-                        self:drawOptions()
+                    if e[2] == 1 then
+                        if xPos < self.x2-self.x1-self.margin and self.txt[ yPos ] then
+                            self.sel = yPos
+                            self:drawOptions()
+                        elseif self.barType and xPos == self.x2-self.x1-self.margin+1 then
+                            local dir = e[4] == self.x1+self.margin and -1 or yPos == self.y2-self.y1-self.margin+1 and 1 or 0
+
+                            if self.spos+dir > 0 and self.spos+dir < #self.txt-self.y2+self.y1+self.margin*2+1 then
+                                self.spos = self.spos + dir
+                                self:drawBar()
+                                self:drawOptions()
+                            end
+                        end
                     end
                 end
             elseif e[1] == "mouse_scroll" then
@@ -398,6 +419,7 @@ function list( arg )
 
         advPrint = advPrint;
         setLen = setLen;
+        obj = arg.wrap or term;
         scrollbg = validColor( arg.scrollbg, 128 );
         scrollfg = validColor( arg.scrollfg, 8 );
         bg = validColor( arg.bg, 256 );
@@ -441,24 +463,28 @@ function button( arg )
 
     local new = {
         draw = function( self )
-            term.setBackgroundColor( self.bg )
+            self.obj.setBackgroundColor( self.bg )
 
             for i = self.y1, self.y2 do
-                term.setCursorPos( self.x1, i )
-                term.write( ( " " ):rep( self.x2-self.x1+1 ) )
+                self.obj.setCursorPos( self.x1, i )
+                self.obj.write( ( " " ):rep( self.x2-self.x1+1 ) )
             end
 
             local pos = math.floor( ( ( self.y2-self.y1+1 )-#self.txt )/2+0.5 ) + self.y1
 
             for i = 1, #self.txt do
-                self.advPrint( setLen( self.txt[i].txt, self.x2-self.x1+1 ), pos+i-1, self.x1, self.x2 )
+                self.advPrint( setLen( self.txt[i].txt, self.x2-self.x1+1 ), pos+i-1, self.x1, self.x2, self.obj )
             end
         end;
 
         evHandle = function( self, ... )
             local e = { ... }
 
-            if e[1] == "mouse_click" then
+            if e[1] == "mouse_click" or self.obj.setTextScale and e[1] == "monitor_touch" then
+                if e[1] == "monitor_touch" then
+                    e[2] = 1
+                end
+
                 if e[3] >= self.x1 and e[3] <= self.x2 and e[4] >= self.y1 and e[4] <= self.y2 then
                     return true
                 end
@@ -467,6 +493,7 @@ function button( arg )
 
         advPrint = advPrint;
         setLen = setLen;
+        obj = arg.wrap or term;
         bg = validColor( arg.bg, 256 );
         x1 = math.min( arg.x1, arg.x2 );
         x2 = math.max( arg.x1, arg.x2 );
