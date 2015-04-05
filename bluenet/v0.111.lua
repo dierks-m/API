@@ -1,5 +1,4 @@
 -- VARIABLES --
-local currentMessageID = 0
 local computerID = os.getComputerID()
 local msgReset = 300
 local opened = {
@@ -78,7 +77,7 @@ function send( msg, recipient, channel, signature, replyID )
 		msg = msg;
 		signature = signature;
 		recipient = recipient;
-		id = currentMessageID .. "-" .. computerID;
+		id = math.random( 1, 2147483647 ) .. "-" .. computerID;
 		protocol = "bluenet";
 		fromID = computerID;
 		replyID = replyID;
@@ -104,7 +103,7 @@ function receive( timeout, replyID )
 
 		if e[1] == "bluenet_message" then
 			if replyID then
-				if e[3].replyID == replyID then
+				if e[6] == replyID then
 					return e[3]
 				end
 			else
@@ -123,12 +122,12 @@ function main()
 		if e[1] == "modem_message" then
 			if type( e[5] ) == "table" and e[5].protocol == "bluenet" then
 				if computerID == e[5].recipient then
-					os.queueEvent( "bluenet_message", e[3], e[5].msg )
-				elseif not e[5].recipient then
-					os.queueEvent( "bluenet_message", e[3], e[5].msg )
-					peripheral.call( openPorts[ e[3] ], "transmit", e[3], e[3], e[5] )
+					os.queueEvent( "bluenet_message", e[5].id, e[5].msg, e[5].fromID, e[5].signature, e[5].replyID )
+				elseif not e[5].recipient and not msgReceived[ e[5].id ] then
+					os.queueEvent( "bluenet_message", e[5].id, e[5].msg, e[5].fromID, e[5].signature, e[5].replyID )
+					peripheral.call( opened[ e[3] ], "transmit", e[3], e[3], e[5] )
 				elseif not msgReceived[ e[5].id ] then
-					peripheral.call( openPorts[ e[3] ], "transmit", e[3], e[3], e[5] )
+					peripheral.call( opened[ e[3] ], "transmit", e[3], e[3], e[5] )
 				end
 
 				msgReceived[ e[5].id ] = true
