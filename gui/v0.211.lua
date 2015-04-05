@@ -81,7 +81,7 @@ function advPrint( text, y1, x1, x2, obj, default )
             x3 = x2-#text:gsub( "[&$][%xrlm];", "" )+1
         end
 
-        text = text:sub( 3 )
+        text = text:sub( 4 )
     end
 
     obj.setCursorPos( x3, y1 )
@@ -550,6 +550,7 @@ function list( arg )
             end
 
             self.txt = arg;
+            self:draw()
         end;
 
         advPrint = advPrint;
@@ -608,7 +609,7 @@ function button( arg )
             local pos = math.floor( ( ( self.y2-self.y1+1 )-#self.txt )/2+0.5 ) + self.y1
 
             for i = 1, #self.txt do
-                self.advPrint( setLen( self.txt[i].txt, self.x2-self.x1+1 ), pos+i-1, self.x1, self.x2, self.obj )
+                self.advPrint( setLen( self.txt[i].txt, self.x2-self.x1+1 ), pos+i-1, self.x1, self.x2, self.obj, { fg=self.fg, bg=self.bg } )
             end
         end;
 
@@ -630,6 +631,7 @@ function button( arg )
         setLen = setLen;
         obj = arg.wrap or term;
         bg = validColor( arg.bg, 256 );
+        fg = validColor( arg.fg, 32768 );
         x1 = math.min( arg.x1, arg.x2 );
         x2 = math.max( arg.x1, arg.x2 );
         y1 = math.min( arg.y1, arg.y2 );
