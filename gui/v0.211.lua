@@ -141,7 +141,7 @@ function textArea( arg )
         formatText = function( self )
             local txt = {}
             for k, v in pairs( self.txt.txt ) do
-                local res = format( self.setVars( v, self.txt.vars or {} ), self.x2-self.x1-arg.margin*2+1 )
+                local res = format( self.setVars( v, self.txt.vars or {} ), self.x2-self.x1-self.margin*2+1 )
 
                 for k1, v1 in pairs( res ) do
                     txt[ #txt+1 ] = v1
