@@ -74,11 +74,11 @@ function advPrint( text, y1, x1, x2, obj, default )
 
     if ort then
         if ort == "m" then
-            x3 = math.floor( ( ( x2-x1+1 )-#text:gsub( "[&$][%xrlm];", "" )+1 )/2+0.5 )+x1-1
+            x3 = math.floor( ( ( x2-x1+1 )-#text:gsub( "[&$][%xrlmo];", "" )+1 )/2+0.5 )+x1-1
         elseif ort == "l" then
             x3 = x1
         elseif ort == "r" then
-            x3 = x2-#text:gsub( "[&$][%xrlm];", "" )+1
+            x3 = x2-#text:gsub( "[&$][%xrlmo];", "" )+1
         end
 
         text = text:sub( 4 )
