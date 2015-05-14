@@ -97,14 +97,14 @@ local function format( text, xSize )
     local xPos, formatted = 1, { "" }
 
     for k in text:gmatch( "%s*%S+" ) do
-        if #k:gsub( "[$&][%xzlr]", "" ) > xSize-xPos then
-            local _, matches = k:gsub( "[$&][%xzlr]", "" )
+        if #k:gsub( "[$&][%xrlm];", "" ) > xSize-xPos then
+            local _, matches = k:gsub( "[$&][%xrlm];", "" )
             if #k-matches*2 > xSize then
-                local rest = xSize-#formatted[ #formatted ]:gsub( "[$&][%xzlr]", "" )
+                local rest = xSize-#formatted[ #formatted ]:gsub( "[$&][%xrlm];", "" )
                 local currPos, actPos = 1, 1
 
                 while currPos < #k do
-                    if not k:sub( currPos ):match( "^[$&][%xzlr]" ) then
+                    if not k:sub( currPos ):match( "^[$&][%xrlm];" ) then
                         if actPos == rest-1 then
                             break
                         end
@@ -125,7 +125,7 @@ local function format( text, xSize )
             end
         else
             formatted[ #formatted ] = formatted[ #formatted ] .. k
-            xPos = xPos + #k:gsub( "[$&][%xzlr]", "" )
+            xPos = xPos + #k:gsub( "[$&][%xrlm];", "" )
         end
     end
 
