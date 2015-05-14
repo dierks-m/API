@@ -111,7 +111,7 @@ local function format( text, xSize )
                         currPos = currPos + 1
                         actPos = actPos + 1
                     else
-                        currPos = currPos + 2
+                        currPos = currPos + 3
                     end
                 end
 
