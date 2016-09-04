@@ -46,7 +46,7 @@ function open( channel )
 	end
 
 	for k, v in pairs( rs.getSides() ) do
-		if peripheral.getType( v ) == "modem" and peripheral.call( v, "isWireless" ) then
+		if peripheral.getType( v ) == "modem" then
 			opened[ channel ] = v
 			peripheral.call( v, "open", channel )
 			return true
